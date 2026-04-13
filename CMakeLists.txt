@@ -2,7 +2,12 @@ cmake_minimum_required(VERSION 4.1)
 project(CpuRayTracing)
 
 find_package(glm)
+
+if(WIN32)
 find_package(Stb)
+elseif(UNIX)
+find_path(STB_INCLUDE_DIR stb_image.h PATH_SUFFIXES stb)
+endif()
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -23,6 +28,10 @@ target_precompile_headers(CpuRayTracing PRIVATE
         <cstdint>
         <glm/glm.hpp>
 )
+
+if(UNIX)
+target_include_directories(CpuRayTracing PRIVATE ${STB_INCLUDE_DIR})
+endif()
 
 target_link_libraries(CpuRayTracing PRIVATE
         glm::glm
