@@ -3,6 +3,7 @@
 
 #include "ray.h"
 
+struct Material;
 struct Ray;
 
 struct HitInfo {
@@ -10,6 +11,7 @@ struct HitInfo {
     glm::vec3 normal;
     float t;
     bool frontFace;
+    const Material* material;
 
     void setFaceNormal(const Ray& ray, const glm::vec3 outwardNormal) {
         frontFace = glm::dot(ray.direction, outwardNormal) < 0;

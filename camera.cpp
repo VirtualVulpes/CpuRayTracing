@@ -9,14 +9,17 @@
 #include <glm/gtx/norm.hpp>
 
 #include "constants.h"
+#include "material.h"
+#include "random.h"
 #include "stb_image_write.h"
 
-Camera::Camera(uint32_t id, glm::ivec2 imageSize, float viewportWidth) : id_(id), imageSize_(imageSize), viewportSize_{
-                                                                             viewportWidth,
-                                                                             calculateViewportHeight(viewportWidth)
-                                                                         },
-                                                                         viewportPosition_{calculateViewportPosition()},
-                                                                         pixelDeltas_(calculatePixelDeltas()) {}
+Camera::Camera(uint32_t id, glm::ivec2 imageSize, float viewportWidth) : id_(id),
+    imageSize_(imageSize), viewportSize_{
+        viewportWidth,
+        calculateViewportHeight(viewportWidth)
+    },
+    viewportPosition_{calculateViewportPosition()},
+    pixelDeltas_(calculatePixelDeltas()) {}
 
 void Camera::render(const std::vector<std::unique_ptr<Hittable> >& hittables) const {
     std::cout << std::format("Camera {} started.", id_) << std::endl;
@@ -29,28 +32,14 @@ void Camera::render(const std::vector<std::unique_ptr<Hittable> >& hittables) co
             int index = x + y * imageSize_.x;
 
             glm::vec3 worldPos = getPixelPosition({x, y});
-            Ray ray{position_, worldPos - position_};
+            glm::vec3 color{0.0f};
+            for (int i = 0; i < Config::NumSamples; ++i) {
+                glm::vec3 offset{(Random::floatRange(0.0f, 1.0f) - 0.5f) * pixelDeltas_.x, (Random::floatRange(0.0f, 1.0f) - 0.5f) * pixelDeltas_.y, 0};
+                Ray ray{position_, (worldPos + offset) - position_};
 
-            glm::vec3 color = {0.0f, 0.0f, 0.0f};
-            bool hit{false};
-            std::optional<HitInfo> info = std::nullopt;
-            float closest{Constants::Infinity};
-            for (const auto& hittable : hittables) {
-                if (auto hitInfo = hittable->isHit(ray, 0.0f, Constants::Infinity)) {
-                    hit = true;
-                    closest = hitInfo->t;
-                    info = hitInfo;
-                    break;
-                }
+                color += getPixelColor(ray, 0, hittables);
             }
-
-            if (hit) {
-                color = 0.5f * (info->normal + glm::vec3(1.0f, 1.0f, 1.0f));
-            } else {
-                glm::vec3 direction = glm::normalize(ray.direction);
-                float a = 0.5f * (direction.y + 1.0f);
-                color = (1.0f - a) * glm::vec3(1.0f, 1.0f, 1.0f) + a * glm::vec3(0.5f, 0.7f, 1.0f);
-            }
+            color /= Config::NumSamples;
 
             colors.at(index) = ColorUtils::floatToInt(color);
         }
@@ -61,6 +50,35 @@ void Camera::render(const std::vector<std::unique_ptr<Hittable> >& hittables) co
                    imageSize_.x * static_cast<int>(sizeof(Color)));
 
     std::cout << std::format("\rCamera {} finished.", id_) << std::endl;
+}
+
+glm::vec3 Camera::getPixelColor(const Ray& ray, int depth, const std::vector<std::unique_ptr<Hittable> >& hittables) const {
+    if (depth > Config::MaxBounces) return glm::vec3{0.0f};
+
+    std::optional<HitInfo> info = std::nullopt;
+    float closest{Constants::Infinity};
+    for (const auto& hittable : hittables) {
+        if (auto hitInfo = hittable->isHit(ray, 0.0f, Constants::Infinity)) {
+            if (hitInfo->t < closest && hitInfo->t > 1e-4) {
+                closest = hitInfo->t;
+                info = hitInfo;
+            }
+        }
+    }
+
+    if (info.has_value()) {
+        glm::vec3 direction = info->normal + Random::randomUnitVector();
+        if (info->material) {
+
+            return info->material->color * getPixelColor({info->position, direction}, depth + 1, hittables);
+        }
+
+        return glm::vec3{1.0f, 0.4f, 0.7f};
+    }
+
+    glm::vec3 direction = glm::normalize(ray.direction);
+    float a = 0.5f * (direction.y + 1.0f);
+    return (1.0f - a) * glm::vec3(1.0f, 1.0f, 1.0f) + a * glm::vec3(0.5f, 0.7f, 1.0f);
 }
 
 // return the world-space viewport height
@@ -89,4 +107,3 @@ glm::vec3 Camera::getPixelPosition(glm::vec2 pixelImagePosition) const {
     glm::vec3 halfPixel = {pixelDeltas_.x / 2.0f, -pixelDeltas_.y / 2.0f, 0.0f};
     return pixelPosition + halfPixel;
 }
-

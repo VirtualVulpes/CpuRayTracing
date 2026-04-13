@@ -22,6 +22,8 @@ add_executable(CpuRayTracing main.cpp
         hittable.h
         sphere.cpp
         sphere.h
+        random.h
+        material.h
 )
 
 target_precompile_headers(CpuRayTracing PRIVATE

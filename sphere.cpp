@@ -4,6 +4,8 @@
 
 #include "ray.h"
 
+Sphere::Sphere(glm::vec3 center, float radius, const Material& material) : center_(center), radius_(radius), material_(material) {}
+
 std::optional<HitInfo> Sphere::isHit(const Ray& ray, float tMin, float tMax) const {
     glm::vec3 oc = center_ - ray.origin;
     auto a = glm::length2(ray.direction);
@@ -27,7 +29,8 @@ std::optional<HitInfo> Sphere::isHit(const Ray& ray, float tMin, float tMax) con
     HitInfo hit{
         .position = ray.at(root),
         .normal = ray.at(root) - center_ / radius_,
-        .t = root
+        .t = root,
+        .material = &material_
     };
     hit.setFaceNormal(ray, (hit.position - center_) / radius_);
 

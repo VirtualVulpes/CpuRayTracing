@@ -12,6 +12,7 @@ private:
     glm::vec3 calculateViewportPosition() const;
     glm::vec2 calculatePixelDeltas() const;
     glm::vec3 getPixelPosition(glm::vec2 pixelImagePosition) const;
+    glm::vec3 getPixelColor(const Ray& ray, int depth, const std::vector<std::unique_ptr<Hittable>>& hittables) const;
 
     uint32_t id_;
 
